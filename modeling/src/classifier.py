@@ -24,7 +24,7 @@ class NodeApplyModule(nn.Module):
     """Update the node feature hv with ReLU(Whv+b)."""
 
     def __init__(self, in_feats, out_feats, activation):
-        super(NodeApplyModule, self).__init__()
+        super().__init__()
         self.linear = nn.Linear(in_feats, out_feats)
         self.activation = activation
 
@@ -36,7 +36,7 @@ class NodeApplyModule(nn.Module):
 
 class GCN(nn.Module):
     def __init__(self, in_feats, out_feats, activation):
-        super(GCN, self).__init__()
+        super().__init__()
         self.apply_mod = NodeApplyModule(in_feats, out_feats, activation)
 
     def forward(self, g, features):
@@ -47,7 +47,7 @@ class GCN(nn.Module):
         return g.ndata.pop("h")
 
 
-def _get_graph_features(graph: dgl.DGLGraph) -> torch.Tensor:
+def _get_graph_context_features(graph: dgl.DGLGraph) -> torch.Tensor:
     features = [
         # For undirected graphs, in_degree is the same as
         # out_degree. I changed it to out_degrees() because it's a spanning tree
@@ -66,18 +66,30 @@ def _get_graph_features(graph: dgl.DGLGraph) -> torch.Tensor:
         F.one_hot(graph.ndata["verified"], num_classes=2),
         F.one_hot(graph.ndata["protected"], num_classes=2),
     ]
-    return torch.cat([feature.view(len(graph), -1).float() for feature in features], dim=-1)
+    return torch.cat(
+        [feature.view(len(graph), -1).float() for feature in features], dim=-1
+    )
+
+
+def _get_graph_features_with_content(graph: dgl.DGLGraph) -> torch.Tensor:
+    context_features = _get_graph_context_features(graph)
+    content_features = [
+        graph.ndata["tweet_content"],
+        graph.ndata["user_bio"],
+    ]
+    return torch.cat(
+        [context_features, *[f.view(len(graph), -1).float() for f in content_features]],
+        dim=-1,
+    )
 
 
 class Classifier(nn.Module):
-    def __init__(self):
-        super(Classifier, self).__init__()
+    input_dimension = 10 + len(NodeTypes) + len(Devices) + 2 * 2 + 2 * 32
 
-        self.input_dimension = 10 + len(NodeTypes) + len(Devices) + 2 * 2
+    def __init__(self, gcn_hidden_dimension=64, fc_hidden_dimension=32):
+        super().__init__()
 
-        gcn_hidden_dimension = 16
-        fc_hidden_dimension = 8
-        self.add_module('batch_norm', nn.BatchNorm1d(self.input_dimension))
+        self.add_module("batch_norm", nn.BatchNorm1d(self.input_dimension))
         self.gcns = nn.ModuleList(
             [
                 GCN(self.input_dimension, gcn_hidden_dimension, F.relu),
@@ -94,10 +106,13 @@ class Classifier(nn.Module):
     def _device(self):
         return next(self.parameters()).device
 
+    def _get_features(self, bg):
+        return _get_graph_features_with_content(bg)
+
     def forward(self, g):
         bg = dgl.batch(g)
-        h = _get_graph_features(bg).to(self._device())
-        # h = self.batch_norm(h)
+        h = self._get_features(bg).to(self._device())
+        h = self.batch_norm(h)
         for gcn in self.gcns:
             h = gcn(bg, h)
         bg.ndata["h"] = h
@@ -105,3 +120,17 @@ class Classifier(nn.Module):
         for fc in self.fcs:
             hg = fc(hg)
         return torch.sigmoid(hg).squeeze()
+
+    @classmethod
+    def from_file(cls, file_path: str, device: torch.device, **kwargs):
+        model = cls(**kwargs)
+        model.load_state_dict(torch.load(file_path, map_location=device))
+        model.to(device)
+        return model
+
+
+class PureContextClassifier(Classifier):
+    input_dimension = 10 + len(NodeTypes) + len(Devices) + 2 * 2
+
+    def _get_features(self, bg):
+        return _get_graph_context_features(bg)

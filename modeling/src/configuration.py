@@ -23,12 +23,17 @@ class Configuration:
     early_stop_patience: int
     debug: bool
     log_interval: int
+    gcn_hidden_dimension: int
+    fc_hidden_dimension: int
 
     run_index: int
     log_dir: str
     log_level: int
     device: str
     dataset_size: int
+    positive_ratio: float
+    data_type: str
+    model_class: str
 
     def __repr__(self):
         return f"""
@@ -37,6 +42,7 @@ class Configuration:
                 Train batch size: {self.train_batch_size}
                 Val batch size: {self.val_batch_size}
                 Dataset size: {self.dataset_size}
+                Positive Ratio: {self.positive_ratio}
                 Number of workers: {self.num_workers}
                 Number of epochs: {self.epochs}
                 Optimizer: {self.optimizer}
@@ -54,6 +60,10 @@ class Configuration:
                 Output folder: {self.output}
                 Run Index: {self.run_index}
                 Device: {self.device}
+                Data Type: {self.data_type}
+                Model Class: {self.model_class}
+                GCN Hidden Dimension: {self.gcn_hidden_dimension}
+                FC Hidden Dimension: {self.fc_hidden_dimension}
         """
 
     @classmethod

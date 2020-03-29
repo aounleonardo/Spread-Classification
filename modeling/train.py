@@ -6,12 +6,10 @@ from datetime import datetime
 import itertools as it
 
 import torch
-from torch import nn
 
 from src.configuration import Configuration
 from src.ignite_training import setup_logger
-from src.training_utils import get_data_loaders, train_on_loaders
-
+from src.training_utils import get_graph_loaders, train_on_loaders
 
 def main(args):
     now = datetime.now()
@@ -44,34 +42,35 @@ def main(args):
         logger.debug("Setup model: {}".format(args.model_name))
 
         logger.debug("Setup train/val dataloaders")
-        loaders = get_data_loaders(
+        positive_ratio, loaders = get_graph_loaders(
             args.dataset_path,
             args.train_batch_size,
             args.val_batch_size,
             args.num_workers,
             dataset_size=size,
+            positive_ratio=args.positive_ratio,
             device=device,
             n_splits=5,
         )
 
-        logger.debug("Setup criterion")
-        criterion = nn.BCELoss()
-        if "cuda" in device:
-            criterion = criterion.cuda()
-
-        for run_index, (train_loader, val_loader) in it.islice(enumerate(loaders), 0, args.max_runs):
+        for run_index, (train_loader, val_loader) in it.islice(
+            enumerate(loaders), 0, args.max_runs
+        ):
             configuration = Configuration.from_dict(
                 **{
                     **vars(args),
+                    "positive_ratio": positive_ratio,
                     "run_index": run_index,
                     "log_dir": log_dir,
                     "log_level": log_level,
                     "device": device,
-                    "dataset_size": size,
+                    "dataset_size": size
+                    or (len(train_loader.dataset) + len(val_loader.dataset)),
+                    "data_type": "graph",
                 }
             )
 
-            train_on_loaders(train_loader, val_loader, criterion, logger, configuration)
+            train_on_loaders(train_loader, val_loader, logger, configuration)
 
 
 if __name__ == "__main__":
@@ -83,6 +82,7 @@ if __name__ == "__main__":
         "--optimizer", type=str, required=True, help='Any of "adam" or "sgd"'
     )
     parser.add_argument("--sizes", "-s", type=int, nargs="*", default=[None])
+    parser.add_argument("--positive-ratio", "-r", type=float, default=None)
     parser.add_argument("--max-runs", type=int, default=None)
 
     parser.add_argument("--model-name", "-m", type=str, default="SpreadClassification")
@@ -101,5 +101,8 @@ if __name__ == "__main__":
     parser.add_argument("--early-stop-patience", type=int, default=20)
     parser.add_argument("--log-interval", type=int, default=100)
     parser.add_argument("--debug", action="store_true", dest="debug", default=False)
+    parser.add_argument("--model-class", "-c", type=str, default="graph", help="Set to 'graph_without_text' to remove nlp influence")
+    parser.add_argument("--gcn-hidden-dimension", "--gcn", type=int, default=64)
+    parser.add_argument("--fc-hidden-dimension", "--fc", type=int, default=32)
 
     main(parser.parse_args())

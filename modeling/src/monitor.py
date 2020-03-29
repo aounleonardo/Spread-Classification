@@ -105,13 +105,9 @@ class Monitor:
     @staticmethod
     def _get_metrics(evaluator, loader):
         metrics = evaluator.run(loader).metrics
-        metrics_map = {
-            name: metrics[name] for name in ["accuracy", "precision", "recall"]
-        }
         return {
-            **metrics_map,
-            "error": 1.0 - metrics["accuracy"],
-            "loss": metrics["nll"],
+            name: metrics[name]
+            for name in ["loss", "accuracy", "precision", "recall", "auc", "tnr", "npv"]
         }
 
     def _start_timer(self):
@@ -125,8 +121,8 @@ class Monitor:
         return timer
 
     def _write_model_graph(self):
-        data_loader_iter = iter(self._train_loader)
-        x, _ = next(data_loader_iter)
+        data = next(iter(self._train_loader))
+        x = data[0]
         x = torch.zeros(
             1
         )  # This is the only way it works for now :/ convert_tensor cannot take in a graph

@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 import dgl
 import networkx as nx
 
+from spread_classification.modeling import TextClassifier
 from spread_classification.utils import Followers
 
 from .features import FEATURES_LIST, get_tweet_features
@@ -57,22 +58,28 @@ def connect_retweets(
 
 
 def get_nodes_features(
-    nodes: List[Node], edges: List[Edge]
+    nodes: List[Node], edges: List[Edge], text_encoder: Optional[TextClassifier] = None
 ) -> List[Tuple[str, Dict[str, Union[int, float]]]]:
     nodes_map = {tid: tweet for tid, tweet in nodes}
     parents = {edge[1]: edge[0] for edge in edges}
     return [
         (
             node_id,
-            asdict(get_tweet_features(tweet, nodes_map[parents.get(node_id, node_id)])),
+            asdict(
+                get_tweet_features(
+                    tweet,
+                    nodes_map[parents.get(node_id, node_id)],
+                    text_encoder=text_encoder,
+                )
+            ),
         )
         for node_id, tweet in nodes
     ]
 
 
-def get_dgl_graph(nodes: List[Node], edges: List[Edge]):
+def get_dgl_graph(nodes: List[Node], edges: List[Edge], text_encoder: Optional[TextClassifier] = None):
     nx_graph = nx.DiGraph()
-    nodes_features = get_nodes_features(nodes, edges)
+    nodes_features = get_nodes_features(nodes, edges, text_encoder=text_encoder)
     nx_graph.add_nodes_from(nodes_features)
     nx_graph.add_edges_from(edges)
 

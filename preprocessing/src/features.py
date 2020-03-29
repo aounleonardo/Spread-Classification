@@ -1,9 +1,17 @@
 from dataclasses import dataclass, fields
-from operator import attrgetter
-from spread_classification.utils import get_datetime
-from enum import Enum
-from typing import Optional, Dict, Any
 from datetime import timedelta
+from enum import Enum
+from operator import attrgetter
+from typing import Any, Dict, Optional
+
+import numpy as np
+import torch
+from torch import nn
+
+from spread_classification.utils import get_datetime
+from .nlp import get_tweet_content, get_user_bio
+from spread_classification.modeling import TextClassifier
+
 
 TYPES_MAP = {"tweet": 1, "retweet": 0, "topic": -1}
 DEVICES_MAP = {"iphone": 0, "android": 1, "web": 2, "ipad": 3, "bot": 4}
@@ -49,6 +57,9 @@ class Features:
     twitter_age: float = 0.0
     verified: int = 0
     protected: int = 0
+    # Tensors
+    user_bio: np.ndarray = np.zeros((1, 32))
+    tweet_content: np.ndarray = np.zeros((1, 32))
 
 
 FEATURES_LIST = [feature.name for feature in fields(Features)]
@@ -106,7 +117,9 @@ def _is_retweet(tweet):
 
 
 def get_tweet_features(
-    tweet: Optional[Dict[str, Any]], parent: Optional[Dict[str, Any]]
+    tweet: Optional[Dict[str, Any]],
+    parent: Optional[Dict[str, Any]],
+    text_encoder: Optional[TextClassifier] = None,
 ) -> Features:
     features = Features(_get_type(tweet))
     if tweet is None or tweet.get("id_str") is None:
@@ -130,4 +143,11 @@ def get_tweet_features(
     features.favourites_count = user.get("favourites_count", 0)
     features.twitter_age = _get_user_twitter_age_at_tweet(user, tweet)
 
+    if text_encoder is not None:
+        features.tweet_content = text_encoder.get_sequence_encoding(
+            get_tweet_content(tweet)
+        ).cpu().detach().numpy()
+        features.user_bio = text_encoder.get_sequence_encoding(
+            get_user_bio(tweet)
+        ).cpu().detach().numpy()
     return features

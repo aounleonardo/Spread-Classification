@@ -12,16 +12,17 @@ destination_folder=$2
 min_branch_size=$3
 
 ratings=($(ls $tweets_dir | sort))
-for rating in ${ratings[@]}
-do
+for rating in ${ratings[@]}; do
     echo $rating
     mkdir $destination_folder/$rating
     folders=($(ls "$tweets_dir/$rating" | sort))
-    for folder_name in ${folders[@]}
-    do
+    for folder_name in ${folders[@]}; do
         echo $folder_name
-        mkdir $destination_folder/$rating/$folder_name
-        mkdir $destination_folder/$rating/$folder_name/tweets
+        mkdir -p "$destination_folder/$rating/$folder_name/tweets"
         python fetch/tweets/prune_retweet_tree.py -i "$tweets_dir/$rating/$folder_name/tweets" -o "$destination_folder/$rating/$folder_name/tweets" --len $min_branch_size
+        if [ -z "$(ls -A $destination_folder/$rating/$folder_name/tweets)" ]; then
+            rm -r "$destination_folder/$rating/$folder_name"
+            echo "$destination_folder/$rating/$folder_name/tweets empty"
+        fi
     done
 done

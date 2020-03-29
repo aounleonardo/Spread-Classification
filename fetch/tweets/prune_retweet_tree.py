@@ -48,11 +48,12 @@ def get_unwanted_tweet_ids(
 
 
 def prune_small_branches(
-    tweets: Dict[str, Dict[str, Any]],
-    children: Dict[str, List[str]],
-    min_branch_size: int,
+    tweets: Dict[str, Dict[str, Any]], min_branch_size: int,
 ) -> Dict[str, Dict[str, Any]]:
-    unwanted_tweet_ids = get_unwanted_tweet_ids(tweets, children, min_branch_size)
+    children_per_tweet = get_children_ids(tweets)
+    unwanted_tweet_ids = get_unwanted_tweet_ids(
+        tweets, children_per_tweet, min_branch_size
+    )
     remaining_tweet_ids = set(tweets.keys()) - unwanted_tweet_ids
     return {
         tweet_id: tweets[tweet_id]
@@ -63,11 +64,8 @@ def prune_small_branches(
 
 def main(args):
     tweets = extract_tweets(args.tweets_dir)
-    children_per_tweet = get_children_ids(tweets)
 
-    remaining_tweets = prune_small_branches(
-        tweets, children_per_tweet, args.min_branch_size
-    )
+    remaining_tweets = prune_small_branches(tweets, args.min_branch_size)
     for tweet_id, tweet in remaining_tweets.items():
         with open(f"{args.pruned_output}/{tweet_id}.json", "w") as file:
             json.dump(tweet, file)

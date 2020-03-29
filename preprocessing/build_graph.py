@@ -9,7 +9,6 @@ from spread_classification.preprocessing import (
     Spread,
     connect_retweets,
     get_dgl_graph,
-    get_nodes_features,
 )
 from spread_classification.utils import (
     Followers,

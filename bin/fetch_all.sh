@@ -15,5 +15,5 @@ do
     echo $rating
     folder_names=($(ls "$tweets_dir/$rating" | sort))
     folders=($(for folder in ${folder_names[@]}; do echo "$tweets_dir/$rating/$folder/tweets"; done))
-    python fetch/tweets/fetch_followers.py -i ${folders[@]} -o data/followers -c 200 --retries 4 --threads 32
+    python fetch/tweets/fetch_followers.py -i ${folders[@]} -o data/followers --retries 4 --threads 48
 done

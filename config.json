@@ -1,0 +1,18 @@
+{
+  "dump_location": "data/hydrated/",
+  "dataset_dir": "data/ids",
+  "tweet_keys_file": "fetch/fakenewsnet/resources/tweet_keys_file.json",
+  "num_process": 4,
+  "num_twitter_keys": 7,
+  "data_collection_choice": [
+    {
+      "news_source": "sysomos",
+      "label": "True"
+    },
+    {
+      "news_source": "sysomos",
+      "label": "False"
+    }
+  ],
+  "data_features_to_collect": []
+}

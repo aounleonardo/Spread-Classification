@@ -123,14 +123,20 @@ class VisdomVisualiser(Observer):
             "accuracy": self._create_plot_window(
                 "#Epochs", "Accuracies", "Training and Validation Average Accuracies"
             ),
-            "error": self._create_plot_window(
-                "#Epochs", "Errors", "Training and Validation Average Errors"
-            ),
             "precision": self._create_plot_window(
                 "#Epochs", "Precisions", "Training and Validation Average Precisions"
             ),
             "recall": self._create_plot_window(
                 "#Epochs", "Recalls", "Training and Validation Average Recalls"
+            ),
+            "auc": self._create_plot_window(
+                "#Epochs", "ROC AUC", "Training and Validation Area Under Curve"
+            ),
+            "tnr": self._create_plot_window(
+                "#Epochs", "TNR", "Training and Validation True Negative Rate"
+            ),
+            "npv": self._create_plot_window(
+                "#Epochs", "NPV", "Training and Validation Negative Predictive Value"
             ),
         }
         if lr_groups_nb and lr_groups_nb > 1:
