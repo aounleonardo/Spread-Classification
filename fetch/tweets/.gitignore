@@ -1,0 +1,6 @@
+twitter_credentials.json
+sysomos/**/*.csv
+spreads/**/*.csv
+followers/*.txt
+graphs/**/*.json
+*.json
